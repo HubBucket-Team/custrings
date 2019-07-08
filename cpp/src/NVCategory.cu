@@ -406,6 +406,34 @@ NVCategory* NVCategory::create_from_ipc( nvcategory_ipc_transfer& ipc )
     return rtn;
 }
 
+// create instance from ipc handle(s)
+NVCategory* NVCategory::create_from_transfer( nvcategory_transfer& ptr )
+{
+    NVCategory* rtn = new NVCategory;
+    unsigned int keys = ptr.keys;
+    if( keys==0 )
+        return rtn;
+    rtn->pImpl->setMemoryHandle(ptr.getMemoryPtr(),ptr.size);
+    custring_view_array d_strings = rtn->pImpl->createStringsListFrom((custring_view_array)ptr.getStringsPtr(),ptr.keys);
+    // fix up the pointers for this context
+    auto execpol = rmm::exec_policy(0);
+    char* baseaddr = (char*)ptr.base_address;
+    char* buffer = rtn->pImpl->getMemoryPtr();
+    thrust::for_each_n(execpol->on(0), thrust::make_counting_iterator<unsigned int>(0), keys,
+        [buffer, baseaddr, d_strings] __device__(unsigned int idx){
+            char* dstr = (char*)d_strings[idx];
+            if( !dstr )
+                return;
+            size_t diff = dstr - baseaddr;
+            char* newaddr = buffer + diff;
+            d_strings[idx] = (custring_view*)newaddr;
+        });
+    // set the map values
+    rtn->pImpl->createMapFrom( (int*)ptr.getMapPtr(), ptr.count );
+    // done
+    return rtn;
+}
+
 //
 // Example merging two categories and remapping the values:
 //
@@ -719,6 +747,14 @@ int NVCategory::create_ipc_transfer( nvcategory_ipc_transfer& ipc )
     ipc.setStrsHandle(pImpl->getStringsPtr(),pImpl->getMemoryPtr(),keys_size());
     ipc.setMemHandle(pImpl->getMemoryPtr(),pImpl->bufferSize);
     ipc.setMapHandle(pImpl->getMapPtr(),size());
+    return 0;
+}
+
+int NVCategory::create_transfer( nvcategory_transfer& ptr )
+{
+    ptr.setStrsHandle(pImpl->getStringsPtr(),pImpl->getMemoryPtr(),keys_size());
+    ptr.setMemHandle(pImpl->getMemoryPtr(),pImpl->bufferSize);
+    ptr.setMapHandle(pImpl->getMapPtr(),size());
     return 0;
 }
 

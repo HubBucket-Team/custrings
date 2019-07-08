@@ -102,9 +102,95 @@ struct nvstrings_ipc_transfer
 /**
  * @brief This is used by the create_from_ipc and create_ipc_transfer methods.
  *
- * It is used to serialize and deserialize an NVStrings instance to/from another context.
+ * It is used to serialize and deserialize an NVCategory instance to/from another context.
  */
-struct nvcategory_ipc_transfer
+struct nvcategory_transfer
+{
+    char* base_address;
+    unsigned int keys;
+    void* strs;
+
+    size_t size;
+    void* mem;
+
+    unsigned int count;
+    void* vals; //map
+
+    nvcategory_transfer()
+    : base_address(0), keys(0), strs(0), size(0), mem(0), count(0), vals(0) {}
+
+    ~nvcategory_transfer() { }
+
+    /**
+     * @brief Sets the strings pointers memory into this context.
+     *
+     * @param[in] in_ptr Memory pointer to strings array.
+     * @param[in] base_address Address of original context.
+     * @param[in] count Number of elements in the array.
+     */
+    virtual void setStrsHandle(void* in_ptr, char* base_address, unsigned int count)
+    {
+        keys = count;
+        this->base_address = base_address;
+        this->strs = in_ptr;
+    }
+
+    /**
+     * @brief Sets the strings objects memory into this context.
+     *
+     * @param[in] in_ptr Memory pointer to strings object array.
+     * @param[in] size The size of the memory in bytes.
+     */
+    virtual void setMemHandle(void* in_ptr, size_t size)
+    {
+        this->size = size;
+        this->mem = in_ptr;
+    }
+
+    /**
+     * @brief Sets the index values memory into this context.
+     *
+     * @param[in] in_ptr Memory pointer to the array.
+     * @param[in] count The number of elements in the array.
+     */
+    virtual void setMapHandle(void* in_ptr, unsigned int count)
+    {
+        this->count = count;
+        this->vals = in_ptr;
+    }
+
+    /**
+     * @brief Creates strings array pointer that can be transferred.
+     */
+    virtual void* getStringsPtr()
+    {
+        return strs;
+    }
+
+    /**
+     * @brief Creates memory pointer that can be transferred.
+     */
+    virtual void* getMemoryPtr()
+    {
+        return mem;
+    }
+
+    /**
+     * @brief Creates value arrays pointer that can be transferred.
+     */
+    virtual void* getMapPtr()
+    {
+        std::cout<<"Base Map\n";
+        return vals;
+    }
+};
+
+/**
+ * @brief This is used by the create_from_ipc and create_ipc_transfer methods.
+ *
+ * It is used to serialize and deserialize an NVCategory instance to/from another context.
+ */
+struct nvcategory_ipc_transfer : nvcategory_transfer
 {
     char* base_address;
     cudaIpcMemHandle_t hstrs;

@@ -22,6 +22,7 @@
  * @brief Class definition for NVCategory.
  */
 
+struct nvcategory_transfer;
 struct nvcategory_ipc_transfer;
 class NVStrings;
 class NVCategoryImpl;
@@ -124,6 +125,8 @@ public:
      * @return Instance with data provided.
      */
     static NVCategory* create_from_ipc( nvcategory_ipc_transfer& ipc );
+
+    static NVCategory* create_from_transfer( nvcategory_transfer& ipc );
     ///@}
 
     /**
@@ -167,6 +170,8 @@ public:
      * @return 0 if successful.
      */
     int create_ipc_transfer( nvcategory_ipc_transfer& ipc );
+
+    int create_transfer( nvcategory_transfer& ptr );
     /**
      * @brief Set bit-array identifying the null values.
      *
