@@ -16,42 +16,6 @@
 // nvcc -w -std=c++11 --expt-extended-lambda -gencode arch=compute_70,code=sm_70 ../tests/ipc_test.cu -L. -lNVStrings -lNVCategory -o ipc_test --linker-options -rpath,.:
 //
 
-int strings_test( std::string& mode )
-{
-    NVStrings* strs = 0;
-    if( mode.compare("client")==0 )
-    {
-        nvstrings_ipc_transfer ipc;
-        FILE* fh = fopen("ipctx.bin","rb");
-        fread(&ipc,1,sizeof(ipc),fh);
-        fclose(fh);
-        printf("%p %ld %ld\n", ipc.base_address, ipc.count, ipc.size);
-        strs = NVStrings::create_from_ipc(ipc);
-        strs->print();
-        printf("%u strings in %ld bytes\n", strs->size(), strs->memsize() );
-    }
-    else
-    {
-        const char* hstrs[] = { "John Smith", "Joe Blow", "Jane Smith" };
-        strs = NVStrings::create_from_array(hstrs,3);
-        nvstrings_ipc_transfer ipc;
-        strs->create_ipc_transfer(ipc);
-        //printf("%p %ld %ld\n", ipc.base_address, ipc.count, ipc.size);
-        strs->print();
-        printf("%u strings in %ld bytes\n", strs->size(), strs->memsize() );
-        FILE* fh = fopen("ipctx.bin","wb");
-        fwrite((void*)&ipc,1,sizeof(ipc),fh);
-        fclose(fh);
-        printf("Server ready. Press enter to terminate.\n");
-        std::cin.ignore();
-        // just checking
-        strs->print();
-    }
-
-    NVStrings::destroy(strs);
-    return 0;
-}
-
 int category_test( std::string& mode )
 {
     NVCategory* cat = 0;

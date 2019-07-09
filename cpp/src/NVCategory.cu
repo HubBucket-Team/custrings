@@ -121,10 +121,10 @@ public:
         memoryBuffer = ptr;
     }
 
-    inline void setMemoryHandle( void* ptr, size_t memSize )
+    inline void setMemoryHandle( void* ptr, size_t memSize, bool isIpcHandle = true )
     {
         setMemoryBuffer(ptr,memSize);
-        bIpcHandle = true;
+        bIpcHandle = isIpcHandle;
     }
 };
 
@@ -413,7 +413,7 @@ NVCategory* NVCategory::create_from_transfer( nvcategory_transfer& ptr )
     unsigned int keys = ptr.keys;
     if( keys==0 )
         return rtn;
-    rtn->pImpl->setMemoryHandle(ptr.getMemoryPtr(),ptr.size);
+    rtn->pImpl->setMemoryHandle(ptr.getMemoryPtr(),ptr.size, false);
     custring_view_array d_strings = rtn->pImpl->createStringsListFrom((custring_view_array)ptr.getStringsPtr(),ptr.keys);
     // fix up the pointers for this context
     auto execpol = rmm::exec_policy(0);
@@ -753,8 +753,10 @@ int NVCategory::create_ipc_transfer( nvcategory_ipc_transfer& ipc )
 int NVCategory::create_transfer( nvcategory_transfer& ptr )
 {
     ptr.setStrsHandle(pImpl->getStringsPtr(),pImpl->getMemoryPtr(),keys_size());
+    ptr.setStrsSize(keys_size()*sizeof(custring_view*));
     ptr.setMemHandle(pImpl->getMemoryPtr(),pImpl->bufferSize);
     ptr.setMapHandle(pImpl->getMapPtr(),size());
+    ptr.setMapSize(size()*sizeof(int));
     return 0;
 }
 
