@@ -24,11 +24,20 @@ int category_test( std::string& mode )
     {
         FILE* fh = fopen("/tmp/cputx.bin","rb");
 
-        size_t count;
+        size_t count_keys;
         size_t offsets_size;
         size_t strs_size;
+        size_t count_strings;
+        size_t values_size;
         
-        fread(&count,1,sizeof(size_t),fh);
+        fread(&count_keys,1,sizeof(size_t),fh);
+
+        fread(&count_strings,1,sizeof(size_t),fh);
+
+        fread(&values_size,1,sizeof(size_t),fh);
+
+        int* values_ptr = (int*) malloc(values_size);
+        fread(values_ptr,1,values_size,fh);
 
         fread(&offsets_size,1,sizeof(size_t),fh);
 
@@ -42,9 +51,16 @@ int category_test( std::string& mode )
 
         fclose(fh);
 
-        cat = NVCategory::create_from_offsets(strs_ptr, count, offsets_ptr);
+        cat = NVCategory::create_from_offsets(strs_ptr, count_keys, offsets_ptr);
 
-        NVStrings* strs = cat->get_keys();
+        NVStrings* strs = cat->to_strings();
+
+        printf("Received:\n");
+        strs->print();
+
+        printf("\nOriginal:\n");
+        cat = cat->gather(values_ptr, count_strings, false);
+        strs = cat->to_strings();
         strs->print();
         NVStrings::destroy(strs);
     }
@@ -53,24 +69,37 @@ int category_test( std::string& mode )
         const char* hstrs[] = { "John", "Jane", "John", "Jane", "Bob" };
         NVStrings* strs = NVStrings::create_from_array(hstrs,5);
         cat = NVCategory::create_from_strings(*strs);
+        printf("Original:\n");
+        strs->print();
 
         strs = cat->get_keys();
+        printf("\nSending keys:\n");
         strs->print();
 
         FILE* fh = fopen("/tmp/cputx.bin","wb");
 
-        size_t count = strs->size();
-        fwrite((void*)&count,1,sizeof(size_t),fh);
+        size_t count_keys = strs->size();
+        fwrite((void*)&count_keys,1,sizeof(size_t),fh);
 
-        size_t offsets_size = (count+1)*sizeof(int);
+        size_t count_strings = cat->size();
+        fwrite((void*)&count_strings,1,sizeof(size_t),fh);
+
+        size_t offsets_size = (count_keys+1)*sizeof(int);
         int* offsets_ptr = (int*) malloc(offsets_size);
 
-        int* lengths = (int*) malloc(count*sizeof(int));
+        int* lengths = (int*) malloc(count_keys*sizeof(int));
         strs->byte_count(lengths, false);
 
-        size_t strs_size = std::accumulate(lengths, lengths+count, 0);
+        size_t strs_size = std::accumulate(lengths, lengths+count_keys, 0);
         char* strs_ptr = (char*) malloc(strs_size);
         strs->create_offsets( strs_ptr, offsets_ptr, nullptr, false);
+
+        size_t values_size = count_strings*sizeof(int);
+        int* values_ptr = (int*) malloc(values_size);
+        cat->get_values(values_ptr, false);
+
+        fwrite((void*)&values_size,1,sizeof(size_t),fh);
+        fwrite(values_ptr,1,values_size,fh);
 
         fwrite((void*)&offsets_size,1,sizeof(size_t),fh);
         fwrite(offsets_ptr,1,offsets_size,fh);
