@@ -6,6 +6,7 @@
 #include <thrust/execution_policy.h>
 #include <thrust/for_each.h>
 #include <thrust/count.h>
+#include <numeric>
 #include "../include/NVStrings.h"
 #include "../include/NVCategory.h"
 #include "../include/ipc_transfer.h"
@@ -61,14 +62,15 @@ int category_test( std::string& mode )
         size_t count = strs->size();
         fwrite((void*)&count,1,sizeof(size_t),fh);
 
-        size_t offsets_size = (strs->size()+1)*sizeof(int);
+        size_t offsets_size = (count+1)*sizeof(int);
         int* offsets_ptr = (int*) malloc(offsets_size);
 
-        size_t totalbytes = strs->total_bytes();
-        char* strs_ptr = (char*) malloc(totalbytes);
-        strs->create_offsets( strs_ptr, offsets_ptr, nullptr, false);
+        int* lengths = (int*) malloc(count*sizeof(int));
+        strs->byte_count(lengths, false);
 
-        size_t strs_size = offsets_ptr[strs->size()];
+        size_t strs_size = std::accumulate(lengths, lengths+count, 0);
+        char* strs_ptr = (char*) malloc(strs_size);
+        strs->create_offsets( strs_ptr, offsets_ptr, nullptr, false);
 
         fwrite((void*)&offsets_size,1,sizeof(size_t),fh);
         fwrite(offsets_ptr,1,offsets_size,fh);

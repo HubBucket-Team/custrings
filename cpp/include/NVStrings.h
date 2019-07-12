@@ -164,11 +164,6 @@ public:
      * @return Number of strings.
      */
     unsigned int size() const;
-    /**
-     * @brief Returns the number of bytes required to store a contiguos buffer of strings.
-     * @return Number of bytes of strings.
-     */
-    size_t total_bytes() const;
 
     /**
      * @brief Create an index for the device strings contained in this instance.

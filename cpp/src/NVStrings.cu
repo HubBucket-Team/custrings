@@ -416,25 +416,6 @@ int NVStrings::create_custring_index( custring_view** strs, bool bdevmem )
     return 0;
 }
 
-size_t NVStrings::total_bytes() const
-{
-    unsigned int count = size();
-    if( count==0 )
-        return 0;
-
-    auto execpol = rmm::exec_policy(0);
-    rmm::device_vector<int> sizes(count+1,0);
-    int* d_sizes = sizes.data().get();
-    custring_view** d_strings = pImpl->getStringsPtr();
-    thrust::for_each_n(execpol->on(0), thrust::make_counting_iterator<unsigned int>(0), count,
-        [d_strings, d_sizes] __device__(unsigned int idx){
-            custring_view* dstr = d_strings[idx];
-            if( dstr )
-                d_sizes[idx] = (int)dstr->size();
-        });
-
-    return thrust::reduce(execpol->on(0), d_sizes, d_sizes+count);
-}
 // copy strings into memory provided
 int NVStrings::create_offsets( char* strs, int* offsets, unsigned char* nullbitmask, bool bdevmem )
 {
